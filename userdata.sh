@@ -42,7 +42,8 @@ sleep 60
 
 # Apply Harness delegate YAML
 cat <<EOF > /home/ec2-user/delegate.yaml
-<apiVersion: v1
+<
+apiVersion: v1
 kind: Namespace
 metadata:
   name: harness-delegate-ng
