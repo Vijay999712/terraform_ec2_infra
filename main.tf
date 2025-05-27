@@ -49,3 +49,11 @@ resource "aws_instance" "minikube_ec2" {
   }
 }
 
+resource "null_resource" "install_delegate" {
+  provisioner "local-exec" {
+    command = <<EOT
+    export KUBECONFIG=/home/ec2-user/.kube/config
+    kubectl apply -f delegate.yaml
+    EOT
+  }
+}
