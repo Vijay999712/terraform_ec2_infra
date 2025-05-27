@@ -31,14 +31,16 @@ mv minikube /usr/local/bin/
 chown ec2-user:ec2-user /usr/local/bin/minikube
 
 # Start minikube as ec2-user using none driver (bare metal)
-sudo -i -u ec2-user bash -c 'minikube start --driver=none'
+sudo -i -u ec2-user bash -c 'minikube start --driver=docker'
 
 # Ensure /usr/local/bin is in ec2-user's PATH
 grep -qxF 'export PATH=$PATH:/usr/local/bin' /home/ec2-user/.bash_profile || echo 'export PATH=$PATH:/usr/local/bin' >> /home/ec2-user/.bash_profile
 chown ec2-user:ec2-user /home/ec2-user/.bash_profile
 
+yum install -y socat ebtables iptables
+
 # Wait for kubeconfig to be available
-sleep 60
+sleep 90
 
 # Apply Harness delegate YAML
 cat <<EOF > /home/ec2-user/delegate.yaml
