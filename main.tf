@@ -18,6 +18,7 @@ provider "aws" {
 resource "aws_instance" "example" {
   ami           = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI in us-east-1
   instance_type = "t2.medium"
+  key_name      = "east1"             # 🔑 Replace with your actual key pair name
 
   tags = {
     Name = "Terraform-EC2-t2-medium"
