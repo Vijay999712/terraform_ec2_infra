@@ -31,7 +31,7 @@ resource "aws_security_group" "minikube_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # SSH access for Terraform
+    cidr_blocks = ["0.0.0.0/0"] # For manual SSH if needed
   }
 
   egress {
@@ -43,32 +43,14 @@ resource "aws_security_group" "minikube_sg" {
 }
 
 resource "aws_instance" "minikube_ec2" {
-  ami                         = "ami-0e58b56aa4d64231b"
+  ami                         = "ami-0e58b56aa4d64231b" # Amazon Linux 2023
   instance_type               = "t2.medium"
   key_name                    = "east1"
   security_groups             = [aws_security_group.minikube_sg.name]
   associate_public_ip_address = true
-  user_data                   = file("userdata.sh")
+  user_data                   = file("userdata.sh") # Contains Minikube + delegate install
 
   tags = {
     Name = "MinikubeEC2"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "echo 'Waiting for kubeconfig to be ready...'",
-      "sleep 90",
-      "echo 'Applying Harness Delegate YAML...'",
-      "echo '${file("delegate.yaml")}' > /home/ec2-user/delegate.yaml",
-      "export KUBECONFIG=/home/ec2-user/.kube/config",
-      "kubectl apply -f /home/ec2-user/delegate.yaml"
-    ]
-
-    connection {
-      type        = "ssh"
-      user        = "ec2-user"
-      private_key = file("~/.ssh/east1.pem") # Update path if needed
-      host        = self.public_ip
-    }
   }
 }
