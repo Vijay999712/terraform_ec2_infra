@@ -1,18 +1,23 @@
 #!/bin/bash
 set -xe
 
+# Update all packages
 yum update -y
+yum clean all
 
-# install git
-yum install git -y
+# Install git
+yum install -y git
+yum clean all
 
 # Install Docker on Amazon Linux 2
 amazon-linux-extras enable docker
 yum install -y docker
+yum clean all
 
 systemctl start docker
 systemctl enable docker
 
+# Add ec2-user to docker group for docker CLI access without sudo
 usermod -aG docker ec2-user
 
 # Install kubectl
@@ -23,6 +28,7 @@ chown ec2-user:ec2-user /usr/local/bin/kubectl
 
 # Install conntrack (required for minikube)
 yum install -y conntrack
+yum clean all
 
 # Install minikube
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -30,21 +36,29 @@ chmod +x minikube
 mv minikube /usr/local/bin/
 chown ec2-user:ec2-user /usr/local/bin/minikube
 
-# Start minikube as ec2-user using none driver (bare metal)
+# Ensure ec2-user's .kube directory exists and has correct ownership
+mkdir -p /home/ec2-user/.kube
+chown ec2-user:ec2-user /home/ec2-user/.kube
+
+# Start minikube as ec2-user using docker driver
 sudo -i -u ec2-user bash -c 'minikube start --driver=docker'
 
-# Ensure /usr/local/bin is in ec2-user's PATH
-grep -qxF 'export PATH=$PATH:/usr/local/bin' /home/ec2-user/.bash_profile || echo 'export PATH=$PATH:/usr/local/bin' >> /home/ec2-user/.bash_profile
-chown ec2-user:ec2-user /home/ec2-user/.bash_profile
+# Fix ownership of .kube after minikube start (creates kubeconfig)
+chown -R ec2-user:ec2-user /home/ec2-user/.kube
 
+# Ensure /usr/local/bin is in ec2-user's PATH in .bashrc (for interactive shells)
+grep -qxF 'export PATH=$PATH:/usr/local/bin' /home/ec2-user/.bashrc || echo 'export PATH=$PATH:/usr/local/bin' >> /home/ec2-user/.bashrc
+chown ec2-user:ec2-user /home/ec2-user/.bashrc
+
+# Install some required packages for minikube networking
 yum install -y socat ebtables iptables
+yum clean all
 
-# Wait for kubeconfig to be available
-sleep 90
+# Wait for Kubernetes cluster to be ready
+sleep 60
 
-# Apply Harness delegate YAML
+# Create the Harness delegate YAML manifest as ec2-user
 cat <<EOF > /home/ec2-user/delegate.yaml
-<
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -176,10 +190,10 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-   name: vijay-kubernetes-delegate-hpa
-   namespace: harness-delegate-ng
-   labels:
-       harness.io/name: vijay-kubernetes-delegate
+  name: vijay-kubernetes-delegate-hpa
+  namespace: harness-delegate-ng
+  labels:
+    harness.io/name: vijay-kubernetes-delegate
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -302,11 +316,10 @@ spec:
             - name: config-volume
               configMap:
                 name: vijay-kubernetes-delegate-upgrader-config
->
 EOF
 
-# Apply the delegate using kubectl as ec2-user
+# Apply the delegate YAML as ec2-user
 sudo -i -u ec2-user bash -c 'export KUBECONFIG=/home/ec2-user/.kube/config && kubectl apply -f /home/ec2-user/delegate.yaml'
 
-# Clean up YAML if needed (optional)
+# Optional: Remove delegate.yaml to clean up
 # rm -f /home/ec2-user/delegate.yaml
