@@ -1,5 +1,4 @@
 #!/bin/bash
-set -xe
 
 # Update system and install dependencies
 sudo yum update -y
@@ -42,8 +41,13 @@ Requires=docker.service
 User=ec2-user
 Group=ec2-user
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
-ExecStart=/usr/local/bin/minikube start 
+ExecStart=/usr/local/bin/minikube start --force
 EOF
+
+# Reload systemd, enable and start minikube service
+sudo systemctl daemon-reload
+sudo systemctl enable minikube
+sudo systemctl start minikube
 
 
 # Create the Harness delegate YAML manifest as ec2-user
