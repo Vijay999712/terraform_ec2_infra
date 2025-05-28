@@ -311,4 +311,13 @@ spec:
                 name: vijay-kubernetes-delegate-upgrader-config
 EOF
 
+# Wait until Kubernetes API server is responsive
+until kubectl get nodes &>/dev/null; do
+  echo "Waiting for Kubernetes to be ready..."
+  sleep 10
+done
+
+# Extra buffer (optional)
+sleep 30
+
 kubectl apply -f /home/ec2-user/delegate.yaml
