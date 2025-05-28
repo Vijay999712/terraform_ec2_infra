@@ -50,6 +50,25 @@ sudo systemctl daemon-reload
 sudo systemctl enable minikube
 sudo systemctl start minikube
 
+# Wait for Minikube to be fully ready (wait up to 3 minutes)
+echo "Waiting for Minikube to be ready..."
+timeout 180 bash -c 'until minikube status | grep -q "host: Running"; do sleep 5; done'
+timeout 180 bash -c 'until minikube status | grep -q "kubelet: Running"; do sleep 5; done'
+timeout 180 bash -c 'until minikube status | grep -q "apiserver: Running"; do sleep 5; done'
+
+# Export KUBECONFIG for kubectl access
+export KUBECONFIG=/home/ec2-user/.kube/config
+sudo -u ec2-user mkdir -p /home/ec2-user/.kube
+sudo -u ec2-user /usr/local/bin/minikube update-context
+sudo chown -R ec2-user:ec2-user /home/ec2-user/.kube
+
+# Wait for Kubernetes API to be accessible
+echo "Waiting for Kubernetes API to become accessible..."
+until sudo -u ec2-user kubectl get nodes &>/dev/null; do
+  echo "Waiting for kubectl access..."
+  sleep 5
+done
+
 
 # Create the Harness delegate YAML manifest as ec2-user
 cat <<EOF > /home/ec2-user/delegate.yaml
