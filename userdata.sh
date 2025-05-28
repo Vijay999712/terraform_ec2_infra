@@ -311,19 +311,30 @@ spec:
                 name: vijay-kubernetes-delegate-upgrader-config
 EOF
 
-# Wait until minikube is running
-until minikube status | grep -q "host: Running"; do
-  echo "Waiting for Minikube host to be running..."
+# Wait for node to be Ready (up to 6 mins)
+echo "Waiting for Minikube node to become Ready..."
+RETRIES=36  # 6 minutes (36 * 10 seconds)
+for i in $(seq 1 $RETRIES); do
+  status=$(kubectl get nodes --no-headers 2>/dev/null | awk '{print $2}')
+  if [[ "$status" == "Ready" ]]; then
+    echo "✅ Minikube node is Ready!"
+    break
+  fi
+  echo "⏳ Attempt $i: Node not ready yet..."
   sleep 10
 done
 
-# Export kubeconfig explicitly
-minikube update-context
+# Final check before applying
+status=$(kubectl get nodes --no-headers 2>/dev/null | awk '{print $2}')
+if [[ "$status" == "Ready" ]]; then
+  if [ -f /home/ec2-user/delegate.yaml ]; then
+    echo "✅ Applying delegate.yaml..."
+    kubectl apply -f /home/ec2-user/delegate.yaml
+  else
+    echo "⚠️ delegate.yaml not found at /home/ec2-user/"
+  fi
+else
+  echo "❌ Node is not Ready after waiting. Skipping delegate.yaml apply."
+fi
 
-# Wait for Kubernetes node to be Ready
-until kubectl get nodes 2>/dev/null | grep -q " Ready "; do
-  echo "Waiting for Kubernetes node to be Ready..."
-  sleep 10
-done
-
-kubectl apply -f /home/ec2-user/delegate.yaml
+EONG
