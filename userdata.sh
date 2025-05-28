@@ -311,13 +311,19 @@ spec:
                 name: vijay-kubernetes-delegate-upgrader-config
 EOF
 
-# Wait until Kubernetes API server is responsive
-until kubectl get nodes &>/dev/null; do
-  echo "Waiting for Kubernetes to be ready..."
+# Wait until minikube is running
+until minikube status | grep -q "host: Running"; do
+  echo "Waiting for Minikube host to be running..."
   sleep 10
 done
 
-# Extra buffer (optional)
-sleep 30
+# Export kubeconfig explicitly
+minikube update-context
+
+# Wait for Kubernetes node to be Ready
+until kubectl get nodes 2>/dev/null | grep -q " Ready "; do
+  echo "Waiting for Kubernetes node to be Ready..."
+  sleep 10
+done
 
 kubectl apply -f /home/ec2-user/delegate.yaml
