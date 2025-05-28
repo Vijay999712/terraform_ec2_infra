@@ -184,10 +184,10 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: vijay-kubernetes-delegate-hpa
-  namespace: harness-delegate-ng
-  labels:
-    harness.io/name: vijay-kubernetes-delegate
+   name: vijay-kubernetes-delegate-hpa
+   namespace: harness-delegate-ng
+   labels:
+       harness.io/name: vijay-kubernetes-delegate
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
