@@ -1,5 +1,5 @@
 #!/bin/bash
-set +xe
+set -euo pipefail
 
 # Update system and install dependencies
 sudo yum update -y
@@ -311,24 +311,27 @@ spec:
                 name: vijay-kubernetes-delegate-upgrader-config
 EOF
 
-# Wait for Minikube node to become Ready (up to 6 minutes)
-echo "Waiting for Minikube node to become Ready..."
-RETRIES=36  # 6 minutes
-for i in $(seq 1 $RETRIES); do
-  NODE_STATUS=$(kubectl get nodes --no-headers 2>/dev/null | awk '{print $2}')
-  if [[ "$NODE_STATUS" == "Ready" ]]; then
-    echo "✅ Minikube node is Ready!"
+echo "🔄 Waiting for Kubernetes node to become Ready..."
+
+for i in {1..36}; do  # ~6 minutes total (36 x 10s)
+  STATUS=$(kubectl get nodes --no-headers | awk '{print $2}')
+  echo "⏳ Attempt $i: Node status = $STATUS"
+
+  if [[ "$STATUS" == "Ready" ]]; then
+    echo "✅ Node is Ready!"
     break
   fi
-  echo "⏳ Attempt $i: Node not ready yet..."
+
   sleep 10
 done
 
-# Final readiness check before applying delegate
-NODE_STATUS=$(kubectl get nodes --no-headers 2>/dev/null | awk '{print $2}')
-if [[ "$NODE_STATUS" == "Ready" ]]; then
-  echo "✅ Applying delegate.yaml..."
-  kubectl apply -f /home/ec2-user/delegate.yaml
-else
-  echo "❌ Minikube still not Ready. Skipping delegate.yaml."
+# Final status check
+FINAL_STATUS=$(kubectl get nodes --no-headers | awk '{print $2}')
+if [[ "$FINAL_STATUS" != "Ready" ]]; then
+  echo "❌ ERROR: Node did not become Ready within 6 minutes"
+  kubectl get nodes
+  exit 1
 fi
+
+echo "🎉 Cluster is ready. Proceeding with kubectl apply..."
+kubectl apply -f /home/ec2-user/delegate.yaml
