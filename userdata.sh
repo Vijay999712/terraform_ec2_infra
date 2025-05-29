@@ -310,28 +310,3 @@ spec:
               configMap:
                 name: vijay-kubernetes-delegate-upgrader-config
 EOF
-
-echo "🔄 Waiting for Kubernetes node to become Ready..."
-
-for i in {1..36}; do  # ~6 minutes total (36 x 10s)
-  STATUS=$(kubectl get nodes --no-headers | awk '{print $2}')
-  echo "⏳ Attempt $i: Node status = $STATUS"
-
-  if [[ "$STATUS" == "Ready" ]]; then
-    echo "✅ Node is Ready!"
-    break
-  fi
-
-  sleep 10
-done
-
-# Final status check
-FINAL_STATUS=$(kubectl get nodes --no-headers | awk '{print $2}')
-if [[ "$FINAL_STATUS" != "Ready" ]]; then
-  echo "❌ ERROR: Node did not become Ready within 6 minutes"
-  kubectl get nodes
-  exit 1
-fi
-
-echo "🎉 Cluster is ready. Proceeding with kubectl apply..."
-kubectl apply -f /home/ec2-user/delegate.yaml
